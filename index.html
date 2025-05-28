@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TON Wallet Game</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .wallet-info {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .game-board {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .question-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .answer-btn {
+            margin: 5px;
+            border-radius: 25px;
+            padding: 12px 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .answer-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .store-item {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .store-item:hover {
+            transform: translateY(-5px);
+        }
+        
+        .balance-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .game-stats {
+            display: flex;
+            justify-content: space-around;
+            background: #e9ecef;
+            border-radius: 15px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .loading {
+            display: none;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="game-container p-4">
+                    <h1 class="text-center mb-4">
+                        <i class="fas fa-coins text-warning"></i>
+                        TON Quiz Game
+                    </h1>
+                    
+                    <!-- Wallet Connection Section -->
+                    <div class="wallet-section mb-4">
+                        <div id="walletDisconnected" class="text-center">
+                            <button id="connectWallet" class="btn btn-primary btn-lg pulse">
+                                <i class="fas fa-wallet"></i>
+                                Connect TON Wallet
+                            </button>
+                            <p class="mt-3 text-muted">Connect your TON wallet to start playing and earning!</p>
+                        </div>
+                        
+                        <div id="walletConnected" class="wallet-info" style="display: none;">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-user-circle"></i> Wallet Connected</h5>
+                                    <p class="mb-1"><strong>Address:</strong> <span id="walletAddress" class="font-monospace"></span></p>
+                                    <p class="mb-0 balance-display"><strong>Balance:</strong> <span id="walletBalance">Loading...</span> TON</p>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <button id="refreshBalance" class="btn btn-light me-2">
+                                        <i class="fas fa-sync-alt"></i> Refresh
+                                    </button>
+                                    <button id="disconnectWallet" class="btn btn-outline-light">
+                                        <i class="fas fa-sign-out-alt"></i> Disconnect
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Game Stats -->
+                    <div id="gameStats" class="game-stats" style="display: none;">
+                        <div class="stat-item">
+                            <div class="stat-value" id="currentScore">0</div>
+                            <small class="text-muted">Score</small>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="livesLeft">3</div>
+                            <small class="text-muted">Lives</small>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="boostersCount">0</div>
+                            <small class="text-muted">Boosters</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Game Board -->
+                    <div id="gameBoard" class="game-board" style="display: none;">
+                        <div id="gameStart">
+                            <h3>Welcome to TON Quiz Game!</h3>
+                            <p class="lead">Test your knowledge and earn rewards!</p>
+                            <button id="startGame" class="btn btn-success btn-lg">
+                                <i class="fas fa-play"></i> Start Game
+                            </button>
+                        </div>
+                        
+                        <div id="gamePlay" style="display: none;">
+                            <div class="question-card">
+                                <h4 id="questionText">Question will appear here...</h4>
+                                <div id="answerButtons" class="mt-3">
+                                    <!-- Answer buttons will be generated here -->
+                                </div>
+                            </div>
+                            
+                            <div class="game-controls">
+                                <button id="useBooster" class="btn btn-warning" disabled>
+                                    <i class="fas fa-magic"></i> Use Booster (<span id="boosterCount">0</span>)
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="gameOver" style="display: none;">
+                            <h3>Game Over!</h3>
+                            <p class="lead">Final Score: <span id="finalScore">0</span></p>
+                            <button id="playAgain" class="btn btn-primary btn-lg">
+                                <i class="fas fa-redo"></i> Play Again
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Store Section -->
+                    <div id="storeSection" style="display: none;">
+                        <h3 class="text-center mb-4">
+                            <i class="fas fa-store"></i> Game Store
+                        </h3>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="store-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5><i class="fas fa-magic text-warning"></i> Question Booster</h5>
+                                            <p class="mb-0">Eliminates 2 wrong answers</p>
+                                            <small class="text-muted">Price: 0.1 TON</small>
+                                        </div>
+                                        <button class="btn btn-primary" onclick="purchaseItem('booster', 0.1)">
+                                            <i class="fas fa-shopping-cart"></i> Buy
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="store-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5><i class="fas fa-heart text-danger"></i> Extra Life</h5>
+                                            <p class="mb-0">Get an additional life</p>
+                                            <small class="text-muted">Price: 0.2 TON</small>
+                                        </div>
+                                        <button class="btn btn-primary" onclick="purchaseItem('life', 0.2)">
+                                            <i class="fas fa-shopping-cart"></i> Buy
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <button id="closeStore" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Close Store
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Game Controls -->
+                    <div id="gameControls" class="text-center mt-4" style="display: none;">
+                        <button id="openStore" class="btn btn-info me-2">
+                            <i class="fas fa-store"></i> Store
+                        </button>
+                        <button id="showLeaderboard" class="btn btn-secondary">
+                            <i class="fas fa-trophy"></i> Leaderboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center p-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5 id="loadingText">Processing transaction...</h5>
+                    <p class="text-muted mb-0">Please confirm in your wallet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    
+    <script>
+        // TON Connect Configuration
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://ton-connect.github.io/demo-dapp-with-wallet/tonconnect-manifest.json',
+            buttonRootId: 'connectWallet'
+        });
+
+        // Game State
+        let gameState = {
+            connected: false,
+            walletAddress: '',
+            balance: 0,
+            score: 0,
+            lives: 3,
+            boosters: 0,
+            currentQuestion: 0,
+            gameActive: false
+        };
+
+        // Sample Questions
+        const questions = [
+            {
+                question: "What does TON stand for?",
+                answers: ["The Open Network", "Total Online Network", "Token Operations Network", "Transparent Online Network"],
+                correct: 0
+            },
+            {
+                question: "Who originally developed TON?",
+                answers: ["Ethereum Foundation", "Telegram", "Bitcoin Core", "Binance"],
+                correct: 1
+            },
+            {
+                question: "What is the native cryptocurrency of TON?",
+                answers: ["Bitcoin", "Ethereum", "Toncoin", "Dogecoin"],
+                correct: 2
+            },
+            {
+                question: "TON uses which consensus mechanism?",
+                answers: ["Proof of Work", "Proof of Stake", "Delegated Proof of Stake", "Proof of Authority"],
+                correct: 1
+            },
+            {
+                question: "What is the block time of TON?",
+                answers: ["10 minutes", "15 seconds", "5 seconds", "1 minute"],
+                correct: 2
+            }
+        ];
+
+        // Initialize the application
+        async function init() {
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Check if wallet is already connected
+            if (tonConnectUI.connected) {
+                await handleWalletConnection(tonConnectUI.wallet);
+            }
+            
+            // Listen for wallet connection changes
+            tonConnectUI.onStatusChange(async (wallet) => {
+                if (wallet) {
+                    await handleWalletConnection(wallet);
+                } else {
+                    handleWalletDisconnection();
+                }
+            });
+        }
+
+        function setupEventListeners() {
+            document.getElementById('connectWallet').addEventListener('click', connectWallet);
+            document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
+            document.getElementById('refreshBalance').addEventListener('click', refreshBalance);
+            document.getElementById('startGame').addEventListener('click', startGame);
+            document.getElementById('playAgain').addEventListener('click', resetGame);
+            document.getElementById('useBooster').addEventListener('click', useBooster);
+            document.getElementById('openStore').addEventListener('click', openStore);
+            document.getElementById('closeStore').addEventListener('click', closeStore);
+        }
+
+        async function connectWallet() {
+            try {
+                await tonConnectUI.connectWallet();
+            } catch (error) {
+                console.error('Failed to connect wallet:', error);
+                alert('Failed to connect wallet. Please try again.');
+            }
+        }
+
+        async function disconnectWallet() {
+            try {
+                await tonConnectUI.disconnect();
+            } catch (error) {
+                console.error('Failed to disconnect wallet:', error);
+            }
+        }
+
+        async function handleWalletConnection(wallet) {
+            gameState.connected = true;
+            gameState.walletAddress = wallet.account.address;
+            
+            document.getElementById('walletDisconnected').style.display = 'none';
+            document.getElementById('walletConnected').style.display = 'block';
+            document.getElementById('gameBoard').style.display = 'block';
+            document.getElementById('gameStats').style.display = 'block';
+            document.getElementById('gameControls').style.display = 'block';
+            
+            document.getElementById('walletAddress').textContent = 
+                wallet.account.address.slice(0, 4) + '...' + wallet.account.address.slice(-4);
+            
+            await refreshBalance();
+            updateGameStats();
+        }
+
+        function handleWalletDisconnection() {
+            gameState.connected = false;
+            gameState.walletAddress = '';
+            gameState.balance = 0;
+            
+            document.getElementById('walletDisconnected').style.display = 'block';
+            document.getElementById('walletConnected').style.display = 'none';
+            document.getElementById('gameBoard').style.display = 'none';
+            document.getElementById('gameStats').style.display = 'none';
+            document.getElementById('gameControls').style.display = 'none';
+            document.getElementById('storeSection').style.display = 'none';
+            
+            resetGame();
+        }
+
+        async function refreshBalance() {
+            try {
+                const response = await fetch(`https://toncenter.com/api/v2/getAddressInformation?address=${gameState.walletAddress}`);
+                const data = await response.json();
+                
+                if (data.ok) {
+                    gameState.balance = parseFloat((data.result.balance / 1000000000).toFixed(4));
+                    document.getElementById('walletBalance').textContent = gameState.balance;
+                } else {
+                    document.getElementById('walletBalance').textContent = 'Error loading';
+                }
+            } catch (error) {
+                console.error('Failed to fetch balance:', error);
+                document.getElementById('walletBalance').textContent = 'Error loading';
+            }
+        }
+
+        function startGame() {
+            gameState.gameActive = true;
+            gameState.currentQuestion = 0;
+            gameState.score = 0;
+            gameState.lives = 3;
+            
+            document.getElementById('gameStart').style.display = 'none';
+            document.getElementById('gamePlay').style.display = 'block';
+            document.getElementById('gameOver').style.display = 'none';
+            
+            showQuestion();
+            updateGameStats();
+        }
+
+        function showQuestion() {
+            if (gameState.currentQuestion >= questions.length) {
+                endGame();
+                return;
+            }
+            
+            const question = questions[gameState.currentQuestion];
+            document.getElementById('questionText').textContent = question.question;
+            
+            const answersDiv = document.getElementById('answerButtons');
+            answersDiv.innerHTML = '';
+            
+            question.answers.forEach((answer, index) => {
+                const button = document.createElement('button');
+                button.className = 'btn btn-outline-primary answer-btn';
+                button.textContent = answer;
+                button.onclick = () => selectAnswer(index);
+                answersDiv.appendChild(button);
+            });
+            
+            document.getElementById('useBooster').disabled = gameState.boosters === 0;
+        }
+
+        function selectAnswer(selectedIndex) {
+            const question = questions[gameState.currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            
+            // Disable all buttons
+            buttons.forEach(btn => btn.disabled = true);
+            
+            if (selectedIndex === question.correct) {
+                buttons[selectedIndex].className = 'btn btn-success answer-btn';
+                gameState.score += 10;
+                
+                setTimeout(() => {
+                    gameState.currentQuestion++;
+                    showQuestion();
+                }, 1500);
+            } else {
+                buttons[selectedIndex].className = 'btn btn-danger answer-btn';
+                buttons[question.correct].className = 'btn btn-success answer-btn';
+                gameState.lives--;
+                
+                setTimeout(() => {
+                    if (gameState.lives <= 0) {
+                        endGame();
+                    } else {
+                        gameState.currentQuestion++;
+                        showQuestion();
+                    }
+                }, 2000);
+            }
+            
+            updateGameStats();
+        }
+
+        function useBooster() {
+            if (gameState.boosters <= 0) return;
+            
+            gameState.boosters--;
+            const question = questions[gameState.currentQuestion];
+            const buttons = document.querySelectorAll('.answer-btn');
+            
+            // Remove 2 wrong answers
+            let wrongAnswers = [];
+            question.answers.forEach((answer, index) => {
+                if (index !== question.correct) {
+                    wrongAnswers.push(index);
+                }
+            });
+            
+            // Randomly select 2 wrong answers to remove
+            const toRemove = wrongAnswers.sort(() => 0.5 - Math.random()).slice(0, 2);
+            toRemove.forEach(index => {
+                buttons[index].style.display = 'none';
+            });
+            
+            updateGameStats();
+        }
+
+        function endGame() {
+            gameState.gameActive = false;
+            document.getElementById('gamePlay').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'block';
+            document.getElementById('finalScore').textContent = gameState.score;
+        }
+
+        function resetGame() {
+            gameState.currentQuestion = 0;
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.gameActive = false;
+            
+            document.getElementById('gameStart').style.display = 'block';
+            document.getElementById('gamePlay').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
+            
+            updateGameStats();
+        }
+
+        function updateGameStats() {
+            document.getElementById('currentScore').textContent = gameState.score;
+            document.getElementById('livesLeft').textContent = gameState.lives;
+            document.getElementById('boostersCount').textContent = gameState.boosters;
+            document.getElementById('boosterCount').textContent = gameState.boosters;
+        }
+
+        async function purchaseItem(itemType, price) {
+            if (!gameState.connected) {
+                alert('Please connect your wallet first');
+                return;
+            }
+            
+            if (gameState.balance < price) {
+                alert('Insufficient balance');
+                return;
+            }
+            
+            try {
+                showLoadingModal('Processing purchase...');
+                
+                // Create transaction
+                const transaction = {
+                    validUntil: Math.floor(Date.now() / 1000) + 300, // 5 minutes
+                    messages: [
+                        {
+                            address: "EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N", // Demo address
+                            amount: (price * 1000000000).toString(), // Convert to nanotons
+                            payload: `Purchase ${itemType}`
+                        }
+                    ]
+                };
+                
+                const result = await tonConnectUI.sendTransaction(transaction);
+                
+                if (result) {
+                    // Grant the purchased item
+                    if (itemType === 'booster') {
+                        gameState.boosters++;
+                    } else if (itemType === 'life') {
+                        gameState.lives++;
+                    }
+                    
+                    updateGameStats();
+                    await refreshBalance();
+                    
+                    alert(`Successfully purchased ${itemType}!`);
+                } else {
+                    alert('Transaction failed');
+                }
+            } catch (error) {
+                console.error('Purchase failed:', error);
+                alert('Purchase failed. Please try again.');
+            } finally {
+                hideLoadingModal();
+            }
+        }
+
+        function openStore() {
+            document.getElementById('gameBoard').style.display = 'none';
+            document.getElementById('storeSection').style.display = 'block';
+        }
+
+        function closeStore() {
+            document.getElementById('storeSection').style.display = 'none';
+            document.getElementById('gameBoard').style.display = 'block';
+        }
+
+        function showLoadingModal(text) {
+            document.getElementById('loadingText').textContent = text;
+            const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            modal.show();
+        }
+
+        function hideLoadingModal() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('loadingModal'));
+            if (modal) modal.hide();
+        }
+
+        // Initialize the application when page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
